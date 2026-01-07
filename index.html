@@ -1,0 +1,222 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ludo Legend | SSS Ultra Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Hind+Siliguri:wght@400;700&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            gridTemplateColumns: { '15': 'repeat(15, minmax(0, 1fr))' },
+            gridTemplateRows: { '15': 'repeat(15, minmax(0, 1fr))' },
+            animation: {
+              'spin-slow': 'spin 12s linear infinite',
+              'float': 'float 4s ease-in-out infinite',
+              'idle-breath': 'idle-breath 5s ease-in-out infinite',
+              'shimmer': 'shimmer 3s infinite linear',
+              'nexus-pulse': 'nexus-pulse 4s ease-in-out infinite',
+              'hologram': 'hologram 2s ease-in-out infinite',
+              'bounce-settle': 'bounce-settle 0.9s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+              'piece-capture': 'piece-capture 0.8s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards',
+              'victory-celebration': 'victory-celebration 1s ease-in-out infinite',
+              'ripple': 'ripple 0.6s ease-out forwards',
+              'dice-shockwave': 'dice-shockwave 0.8s cubic-bezier(0.165, 0.84, 0.44, 1) forwards',
+              'dice-fire-ring': 'dice-fire-ring 0.6s ease-out forwards',
+              'energy-rail': 'energy-rail 2s linear infinite',
+              'home-impact': 'home-impact 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
+              'burst': 'burst 0.6s ease-out forwards',
+              'particle-drift': 'particle-drift 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
+              'monolith-float': 'monolith-float 6s ease-in-out infinite',
+              'scanline': 'scanline 10s linear infinite',
+              'dice-shake': 'dice-shake 0.4s cubic-bezier(.36,.07,.19,.97) both',
+              'ambient-shimmer': 'ambient-shimmer 8s linear infinite',
+              'path-shimmer': 'path-shimmer 6s infinite ease-in-out',
+              'safe-breath': 'safe-breath 3s ease-in-out infinite',
+              'start-glow': 'start-glow 4s ease-in-out infinite',
+              'movable-pulse': 'movable-pulse 1.5s ease-in-out infinite',
+              'movable-glow': 'movable-glow 2s linear infinite',
+            },
+            keyframes: {
+              float: {
+                '0%, 100%': { transform: 'translateY(0) rotateX(0deg)' },
+                '50%': { transform: 'translateY(-15px) rotateX(4deg)' },
+              },
+              scanline: {
+                '0%': { transform: 'translateY(-100%)' },
+                '100%': { transform: 'translateY(100%)' }
+              },
+              'monolith-float': {
+                '0%, 100%': { transform: 'translateY(0) rotate(-1deg)', filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.5))' },
+                '50%': { transform: 'translateY(-10px) rotate(1deg)', filter: 'drop-shadow(0 40px 50px rgba(0,0,0,0.3))' },
+              },
+              'nexus-pulse': {
+                '0%, 100%': { transform: 'scale(1) rotate(0deg)', filter: 'brightness(1) contrast(1)' },
+                '50%': { transform: 'scale(1.05) rotate(10deg)', filter: 'brightness(1.5) contrast(1.2)' },
+              },
+              'energy-rail': {
+                '0%': { backgroundPosition: '0% 0%' },
+                '100%': { backgroundPosition: '100% 100%' },
+              },
+              'dice-shake': {
+                '10%, 90%': { transform: 'translate3d(-1px, 0, 0)' },
+                '20%, 80%': { transform: 'translate3d(2px, 0, 0)' },
+                '30%, 50%, 70%': { transform: 'translate3d(-4px, 0, 0)' },
+                '40%, 60%': { transform: 'translate3d(4px, 0, 0)' }
+              },
+              'dice-shockwave': {
+                '0%': { transform: 'scale(0.5) translateZ(-10px)', opacity: '1', borderWeight: '12px' },
+                '100%': { transform: 'scale(4.5) translateZ(80px)', opacity: '0', borderWeight: '0px' },
+              },
+              'dice-fire-ring': {
+                '0%': { transform: 'scale(0.2)', opacity: '1', filter: 'blur(2px)' },
+                '100%': { transform: 'scale(3.5)', opacity: '0', filter: 'blur(20px)' },
+              },
+              'bounce-settle': {
+                '0%': { transform: 'translateY(-150px) scale3d(0.8, 1.2, 1)', opacity: '0' },
+                '40%': { transform: 'translateY(0) scale3d(1.4, 0.6, 1)', opacity: '1' },
+                '55%': { transform: 'translateY(-40px) scale3d(0.9, 1.1, 1)' },
+                '70%': { transform: 'translateY(0) scale3d(1.1, 0.9, 1)' },
+                '85%': { transform: 'translateY(-15px) scale3d(0.95, 1.05, 1)' },
+                '100%': { transform: 'translateY(0) scale3d(1, 1, 1)' },
+              },
+              'home-impact': {
+                '0%': { transform: 'translateY(-200px) scale(0) rotate(0deg)', filter: 'brightness(3) blur(10px)', opacity: '0' },
+                '50%': { transform: 'translateY(0) scale(1.5) rotate(720deg)', filter: 'brightness(2) blur(0px)', opacity: '1' },
+                '100%': { transform: 'translateY(0) scale(1) rotate(1080deg)', filter: 'brightness(1)' },
+              },
+              'burst': {
+                '0%': { transform: 'scale(0.5)', opacity: '0.8' },
+                '100%': { transform: 'scale(2.5)', opacity: '0' }
+              },
+              'particle-drift': {
+                '0%': { transform: 'translate(0, 0) scale(1.5)', opacity: '1' },
+                '100%': { transform: 'translate(var(--particle-x, 50px), var(--particle-y, 50px)) scale(0)', opacity: '0' }
+              },
+              'ambient-shimmer': {
+                '0%': { backgroundPosition: '-200% 0' },
+                '100%': { backgroundPosition: '200% 0' }
+              },
+              'path-shimmer': {
+                '0%': { boxShadow: 'inset 0 0 0px rgba(255,255,255,0)' },
+                '50%': { boxShadow: 'inset 0 0 15px rgba(255,255,255,0.05)' },
+                '100%': { boxShadow: 'inset 0 0 0px rgba(255,255,255,0)' }
+              },
+              'safe-breath': {
+                '0%, 100%': { backgroundColor: 'rgba(56, 189, 248, 0.05)', boxShadow: 'inset 0 0 10px rgba(56, 189, 248, 0.05)' },
+                '50%': { backgroundColor: 'rgba(56, 189, 248, 0.15)', boxShadow: 'inset 0 0 25px rgba(56, 189, 248, 0.2)' }
+              },
+              'start-glow': {
+                '0%, 100%': { filter: 'brightness(1) saturate(1)', transform: 'scale(1)' },
+                '50%': { filter: 'brightness(1.4) saturate(1.2)', transform: 'scale(1.02)' }
+              },
+              'movable-pulse': {
+                '0%, 100%': { transform: 'scale(1)', opacity: '1' },
+                '50%': { transform: 'scale(1.15)', opacity: '0.8' }
+              },
+              'movable-glow': {
+                '0%': { filter: 'hue-rotate(0deg) brightness(1)' },
+                '50%': { filter: 'hue-rotate(15deg) brightness(1.5)' },
+                '100%': { filter: 'hue-rotate(0deg) brightness(1)' }
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+        body {
+            font-family: 'Outfit', 'Hind Siliguri', sans-serif;
+            background: #010409;
+            color: white;
+            overflow: hidden;
+            background-image: radial-gradient(circle at center, #1e1b4b 0%, #020617 100%);
+        }
+        
+        .preserve-3d { transform-style: preserve-3d; }
+        
+        /* Obsidian Glass Effect */
+        .obsidian-glass {
+          background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          box-shadow: 
+            0 25px 50px -12px rgba(0, 0, 0, 0.8),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        /* SSS Grid Tiles */
+        .sss-tile {
+          position: relative;
+          background: rgba(15, 23, 42, 0.4);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          overflow: hidden;
+        }
+        .sss-tile::after {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(110deg, transparent 40%, rgba(255,255,255,0.03) 50%, transparent 60%);
+          background-size: 200% 100%;
+          animation: ambient-shimmer 8s infinite linear;
+          pointer-events: none;
+        }
+
+        /* Scanline Overlay */
+        .holographic-overlay::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(to bottom, transparent, rgba(99, 102, 241, 0.03) 50%, transparent);
+          background-size: 100% 4px;
+          pointer-events: none;
+          z-index: 100;
+        }
+
+        /* Energy Rails */
+        .rail-glow {
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(45deg, transparent 25%, rgba(99, 102, 241, 0.05) 50%, transparent 75%);
+          background-size: 200% 200%;
+          animation: energy-rail 4s linear infinite;
+          pointer-events: none;
+        }
+
+        .neon-rim {
+          box-shadow: 0 0 30px rgba(99, 102, 241, 0.2), inset 0 0 15px rgba(99, 102, 241, 0.1);
+        }
+
+        .monolith-shadow {
+          background: radial-gradient(ellipse at center, rgba(0,0,0,0.5) 0%, transparent 70%);
+        }
+
+        .text-glow {
+          text-shadow: 0 0 10px rgba(255,255,255,0.5), 0 0 20px rgba(99, 102, 241, 0.3);
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "@google/genai": "https://esm.sh/@google/genai@^1.34.0",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
+  }
+}
+</script>
+</head>
+<body>
+    <div id="root"></div>
+</body>
+</html>
