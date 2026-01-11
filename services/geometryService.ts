@@ -1,42 +1,37 @@
 
 import { PlayerColor, Piece } from '../types';
+import { GAME_RULES } from '../constants/gameRules';
 
 /**
- * UNIVERSAL BOARD PATH (52 TILES)
- * This path starts at the Red Arm Corner [6,0] and follows a clockwise loop.
+ * GENERATIVE GEOMETRY: The board is a 15x15 grid.
+ * We define the main 52-tile circuit starting from RED's start tile [6,1].
+ * Each arm consists of 13 tiles (12 path + 1 pivot).
  */
 export const MAIN_PATH_COORDS = [
-  // Red side quadrant entrance to Blue entrance
-  [6,0],[6,1],[6,2],[6,3],[6,4],[6,5], // Red start tile is at index 1
-  [5,6],[4,6],[3,6],[2,6],[1,6],[0,6],
-  [0,7],
-
-  // Blue side quadrant entrance to Yellow entrance
-  [0,8],[1,8],[2,8],[3,8],[4,8],[5,8], // Blue start tile is at index 14
-  [6,9],[6,10],[6,11],[6,12],[6,13],[6,14],
-  [7,14],
-
-  // Yellow side quadrant entrance to Green entrance
-  [8,14],[8,13],[8,12],[8,11],[8,10],[8,9], // Yellow start tile is at index 27
-  [9,8],[10,8],[11,8],[12,8],[13,8],[14,8],
-  [14,7],
-
-  // Green side quadrant entrance back to Red entrance
-  [14,6],[13,6],[12,6],[11,6],[10,6],[9,6], // Green start tile is at index 40
-  [8,5],[8,4],[8,3],[8,2],[8,1],[8,0],
-  [7,0]
+  // ARM 1 (Indices 0-12) - RED TERRITORY
+  [6,1], [6,2], [6,3], [6,4], [6,5], [5,6], [4,6], [3,6], [2,6], [1,6], [0,6], [0,7], [0,8],
+  // ARM 2 (Indices 13-25) - BLUE TERRITORY
+  [1,8], [2,8], [3,8], [4,8], [5,8], [6,9], [6,10], [6,11], [6,12], [6,13], [6,14], [7,14], [8,14],
+  // ARM 3 (Indices 26-38) - YELLOW TERRITORY
+  [8,13], [8,12], [8,11], [8,10], [8,9], [9,8], [10,8], [11,8], [12,8], [13,8], [14,8], [14,7], [14,6],
+  // ARM 4 (Indices 39-51) - GREEN TERRITORY
+  [13,6], [12,6], [11,6], [10,6], [9,6], [8,5], [8,4], [8,3], [8,2], [8,1], [8,0], [7,0], [6,0]
 ];
 
-// Offsets point to the Colored Start Tile for each player
+/**
+ * Local position 0 maps to these global indices in the MAIN_PATH_COORDS array.
+ */
 export const PLAYER_OFFSETS: Record<PlayerColor, number> = {
-  RED: 1,
-  BLUE: 14,
-  YELLOW: 27,
-  GREEN: 40
+  RED: 0,    
+  BLUE: 13,  
+  YELLOW: 26, 
+  GREEN: 39  
 };
 
-// Safe spots relative to the global path index
-export const SAFE_POSITIONS = [1, 9, 14, 22, 27, 35, 40, 48];
+/**
+ * Safe spots in global circuit indices.
+ */
+export const SAFE_POSITIONS = [0, 8, 13, 21, 26, 34, 39, 47];
 
 export const BASE_POSITIONS: Record<PlayerColor, number[][]> = {
   RED: [[1, 1], [1, 4], [4, 1], [4, 4]],
@@ -55,29 +50,35 @@ export const HOME_PATHS: Record<PlayerColor, number[][]> = {
 export function getTileCoord(pc: Piece): { r: number; c: number } {
   const { color, position, id } = pc;
   
-  if (position === -1) {
-    const pieceIndex = parseInt(id.split('-')[1]) - 1;
+  // 1. Check if piece is in Base/Yard
+  if (position === GAME_RULES.BASE_POSITION) {
+    const pieceIndex = (parseInt(id.split('-')[1]) || 1) - 1;
     const coords = BASE_POSITIONS[color][pieceIndex];
     return { r: coords[0], c: coords[1] };
   }
   
-  if (position >= 52 && position < 100) {
-    const coords = HOME_PATHS[color][position - 52] || [7, 7];
+  // 2. Check if piece is in Private Home Path (steps 52-57)
+  if (position >= GAME_RULES.HOME_PATH_START && position < GAME_RULES.VICTORY_POSITION) {
+    const homeIdx = position - GAME_RULES.HOME_PATH_START;
+    const coords = HOME_PATHS[color][homeIdx] || [7, 7];
     return { r: coords[0], c: coords[1] };
   }
   
-  if (position === 100) return { r: 7, c: 7 };
+  // 3. Check if piece has reached Victory
+  if (position === GAME_RULES.VICTORY_POSITION) return { r: 7, c: 7 };
   
-  const globalIndex = (position + PLAYER_OFFSETS[color]) % 52;
+  // 4. Circuit Mapping (Steps 0-51)
+  // Ensure we normalize the global index correctly.
+  const offset = PLAYER_OFFSETS[color];
+  const globalIndex = (position + offset) % GAME_RULES.BOARD_CIRCUIT_SIZE;
+  
+  // Safety fallback for out-of-bounds mapping
   const coords = MAIN_PATH_COORDS[globalIndex];
-  
-  if (!coords) return { r: 7, c: 7 };
-  
-  return { r: coords[0], c: coords[1] };
+  return coords ? { r: coords[0], c: coords[1] } : { r: 7, c: 7 };
 }
 
 export function isSafeTile(color: PlayerColor, position: number): boolean {
-  if (position < 0 || position >= 52) return false;
-  const globalPos = (position + PLAYER_OFFSETS[color]) % 52;
+  if (position < 0 || position >= GAME_RULES.BOARD_CIRCUIT_SIZE) return false;
+  const globalPos = (position + PLAYER_OFFSETS[color]) % GAME_RULES.BOARD_CIRCUIT_SIZE;
   return SAFE_POSITIONS.includes(globalPos);
 }

@@ -9,20 +9,28 @@ export interface Piece {
 
 export type GameMode = 'CLASSIC' | 'TEAM' | 'QUICK';
 
+export type TimeOfDay = 'DAY' | 'NIGHT' | 'DYNAMIC';
+
 export interface Player {
   id: string;
   name: string;
   avatar?: string;
   color: PlayerColor;
-  teamId?: string; // For Team Mode (e.g., "TEAM_A", "TEAM_B")
+  teamId?: string; 
   isAI: boolean;
   pieces: Piece[];
   languagePreference: 'en' | 'bn' | 'hi' | 'es';
 }
 
-export type GameState = 'LOBBY' | 'ROLLING' | 'MOVING' | 'PROCESSING' | 'WON';
+export type GameState = 
+  | 'LOBBY' 
+  | 'WAITING_FOR_ROLL' 
+  | 'DICE_ROLLING' 
+  | 'WAITING_FOR_MOVE' 
+  | 'PIECE_ANIMATING' 
+  | 'WON';
 
-export type AppView = 'AUTH' | 'MAIN_MENU' | 'FRIENDS' | 'PROFILE' | 'GAME';
+export type AppView = 'AUTH' | 'MAIN_MENU' | 'FRIENDS' | 'PROFILE' | 'GAME' | 'SETTINGS';
 
 export interface User {
   id: string;

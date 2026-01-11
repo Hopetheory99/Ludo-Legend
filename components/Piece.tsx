@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef, memo, useMemo } from 'react';
 import { Piece as PieceType, PlayerColor } from '../types';
-import { Star, Shield, Sparkles } from 'lucide-react';
+import { Star, Shield, Sparkles, ChevronUp, Zap } from 'lucide-react';
 import { getTileCoord, isSafeTile } from '../services/geometryService';
 import { Z_INDEX } from '../constants/theme';
 
@@ -15,6 +15,7 @@ interface PieceProps {
   canMove: boolean;
   gameState: string;
   counterRotate: string;
+  currentCycle?: 'DAY' | 'NIGHT';
   onClick: (id: string) => void;
 }
 
@@ -71,21 +72,42 @@ const LandingBurst: React.FC<{ color: PlayerColor; type: TileType }> = ({ color,
   );
 };
 
-const getStackOffset = (index: number, total: number) => {
-  if (total <= 1) return { x: 0, y: 0, scale: 1, z: 10 };
-  const intensity = 5; 
+const getStackPhysics = (index: number, total: number) => {
+  if (total <= 1) return { x: 0, y: 0, scale: 1, z: 20 };
+  
+  const baseSpread = 10; 
+  const liftPerLevel = 12; 
+
+  let x = 0;
+  let y = 0;
+  let scale = 0.9;
+
   if (total === 2) {
-    return { x: index === 0 ? -intensity : intensity, y: 0, scale: 0.82, z: 10 + (index * 4) };
+    const direction = index === 0 ? -1 : 1;
+    x = direction * baseSpread;
+    y = direction * (baseSpread / 2);
+  } else if (total === 3) {
+    const angle = (index * 120 - 90) * (Math.PI / 180);
+    x = Math.cos(angle) * (baseSpread * 1.2);
+    y = Math.sin(angle) * (baseSpread * 1.2);
+    scale = 0.82;
+  } else if (total >= 4) {
+    const angle = (index * 90 + 45) * (Math.PI / 180);
+    x = Math.cos(angle) * (baseSpread * 1.4);
+    y = Math.sin(angle) * (baseSpread * 1.4);
+    scale = 0.78;
   }
-  if (total === 3) {
-    const coords = [{ x: 0, y: -intensity }, { x: -intensity, y: intensity }, { x: intensity, y: intensity }];
-    return { ...coords[index], scale: 0.76, z: 10 + (index * 4) };
-  }
-  const coords = [{ x: -intensity, y: -intensity }, { x: intensity, y: -intensity }, { x: -intensity, y: intensity }, { x: intensity, y: intensity }];
-  return { ...coords[index], scale: 0.68, z: 10 + (index * 4) };
+
+  return { 
+    x, 
+    y, 
+    scale, 
+    z: 20 + (index * liftPerLevel),
+    brightness: 0.8 + (index / total) * 0.2 
+  };
 };
 
-const Piece: React.FC<PieceProps> = ({ pc, r, c, stackIndex, stackTotal, active, canMove, gameState, counterRotate, onClick }) => {
+const Piece: React.FC<PieceProps> = ({ pc, r, c, stackIndex, stackTotal, active, canMove, gameState, counterRotate, currentCycle = 'DAY', onClick }) => {
   const [isLanding, setIsLanding] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
   const [isCaptured, setIsCaptured] = useState(false);
@@ -139,14 +161,14 @@ const Piece: React.FC<PieceProps> = ({ pc, r, c, stackIndex, stackTotal, active,
   }, [pc.position, r, c]);
 
   const pieceColorStyles = { 
-    RED: 'from-red-400 via-red-600 to-red-950 shadow-[0_15px_40px_rgba(239,68,68,0.5)]', 
-    BLUE: 'from-blue-400 via-blue-600 to-blue-950 shadow-[0_15px_40px_rgba(59,130,246,0.5)]', 
-    GREEN: 'from-emerald-400 via-emerald-600 to-emerald-950 shadow-[0_15px_40px_rgba(16,185,129,0.5)]', 
-    YELLOW: 'from-yellow-300 via-yellow-500 to-yellow-950 shadow-[0_15px_40px_rgba(234,179,8,0.5)]' 
+    RED: 'from-red-400 via-red-600 to-red-950 shadow-[0_15px_40px_rgba(239,68,68,0.4)]', 
+    BLUE: 'from-blue-400 via-blue-600 to-blue-950 shadow-[0_15px_40px_rgba(59,130,246,0.4)]', 
+    GREEN: 'from-emerald-400 via-emerald-600 to-emerald-950 shadow-[0_15px_40px_rgba(16,185,129,0.4)]', 
+    YELLOW: 'from-yellow-300 via-yellow-500 to-yellow-950 shadow-[0_15px_40px_rgba(234,179,8,0.4)]' 
   };
 
-  const isMovable = active && canMove && gameState === 'MOVING';
-  const stackOffset = getStackOffset(stackIndex, stackTotal);
+  const isMovable = active && canMove && (gameState === 'WAITING_FOR_MOVE');
+  const physics = getStackPhysics(stackIndex, stackTotal);
   const currentR = isCaptured ? oldCoords.current.r : r;
   const currentC = isCaptured ? oldCoords.current.c : c;
 
@@ -154,46 +176,111 @@ const Piece: React.FC<PieceProps> = ({ pc, r, c, stackIndex, stackTotal, active,
   if (isMoving) dynamicZIndex = Z_INDEX.PIECE_MOVING;
   else if (isHomeArrival) dynamicZIndex = Z_INDEX.PIECE_HOME_ARRIVAL;
   else if (isLanding) dynamicZIndex = Z_INDEX.PIECE_LANDING;
+  else if (stackTotal > 1) dynamicZIndex = Z_INDEX.PIECE_STACKED + stackIndex;
+
+  const isStable = !isMoving && !isLanding && !isMovable && !isVictory && !isHomeArrival && !isCaptured;
 
   return (
     <div 
-      className={`absolute transition-all duration-700 cubic-bezier(0.34, 1.56, 0.64, 1) pointer-events-auto preserve-3d
-        ${isCaptured ? 'animate-piece-capture' : ''}
-        ${isMovable ? 'cursor-pointer' : ''}
-        ${isLanding ? 'animate-bounce-settle' : ''}
-        ${isHomeArrival ? 'animate-home-impact' : ''}
-        ${!isMoving && !isLanding && !isMovable && !isVictory && !isHomeArrival ? 'animate-idle-breath' : ''}
-      `}
+      className={`absolute transition-all duration-700 cubic-bezier(0.34, 1.56, 0.64, 1) pointer-events-auto preserve-3d will-change-transform ${isMovable ? 'cursor-pointer' : ''}`}
       style={{ 
-        top: `${(currentR / 15) * 100}%`, left: `${(currentC / 15) * 100}%`, width: '6.66%', height: '6.66%', padding: '0.8%',
+        top: `${(currentR / 15) * 100}%`, 
+        left: `${(currentC / 15) * 100}%`, 
+        width: '6.66%', 
+        height: '6.66%', 
+        padding: '0.4%',
         zIndex: dynamicZIndex,
-        transform: isMoving ? `translateZ(120px) scale(1.6)` : `translate3d(${stackOffset.x}px, ${stackOffset.y}px, ${stackOffset.z}px) scale(${stackOffset.scale})`
+        transform: isMoving 
+          ? `translateZ(160px) scale(1.6)` 
+          : isMovable 
+            ? `translate3d(${physics.x}px, ${physics.y - 12}px, ${physics.z + 40}px) scale(${physics.scale * 1.15})`
+            : `translate3d(${physics.x}px, ${physics.y}px, ${physics.z}px) scale(${physics.scale})`
       }}
       onClick={() => isMovable && onClick(pc.id)}
     >
-      {showBurst && <LandingBurst color={pc.color} type={tileType} />}
-      
-      {/* Movable Highlight Glow */}
-      {isMovable && (
-        <div className="absolute inset-[-15%] rounded-full bg-white/30 blur-xl animate-movable-pulse z-[-1]" />
-      )}
-
-      <div className={`absolute inset-2 bg-black/80 rounded-full transition-all duration-700 blur-[6px] ${isMoving ? 'scale-[2.5] translate-y-16 opacity-5' : 'scale-110 translate-y-2 opacity-40'}`} />
-      
-      <div className={`w-full h-full rounded-full bg-gradient-to-br border-b-[8px] border-black/50 transition-all preserve-3d group ${pieceColorStyles[pc.color]} ${isMovable ? 'animate-movable-pulse ring-4 ring-white shadow-[0_0_30px_rgba(255,255,255,0.8)]' : 'opacity-95'} ${isVictory ? 'animate-victory-celebration shadow-[0_0_80px_white] ring-4 ring-yellow-400' : ''} ${counterRotate}`}>
-        {/* Visual ring for movable pieces */}
-        {isMovable && (
-          <div className="absolute inset-[-6px] rounded-full border-2 border-white/60 animate-ping opacity-20" />
-        )}
+      <div className={`w-full h-full preserve-3d relative transition-transform duration-500
+        ${isCaptured ? 'animate-piece-capture' : ''}
+        ${isLanding ? 'animate-bounce-settle' : ''}
+        ${isHomeArrival ? 'animate-home-impact' : ''}
+        ${isStable ? 'animate-idle-breath' : ''}
+        ${isVictory ? 'animate-victory-celebration' : ''}
+      `}>
+        {showBurst && <LandingBurst color={pc.color} type={tileType} />}
         
-        <div className="absolute inset-0 rounded-full border-2 border-white/0 group-hover:border-white/40 z-10" />
-        <div className="absolute inset-[15%] rounded-full border-[1.5px] border-white/20" />
-        <div className={`absolute inset-[40%] rounded-full transition-opacity duration-500 ${isMoving ? 'opacity-100' : 'opacity-30'} ${pc.color === 'YELLOW' ? 'bg-white' : 'bg-white/40'} blur-[1px] shadow-[0_0_10px_white]`} />
+        {/* Movable Hint: Floating Chevron */}
+        {isMovable && (
+          <div className={`absolute -top-12 left-1/2 -translate-x-1/2 flex flex-col items-center gap-0.5 animate-bounce ${counterRotate}`}>
+            <div className="bg-white/90 p-1 rounded-full shadow-[0_0_15px_white] animate-pulse">
+               <ChevronUp size={16} className="text-slate-900 font-bold" />
+            </div>
+            <div className="w-1 h-2 bg-gradient-to-b from-white to-transparent" />
+          </div>
+        )}
+
+        {/* Physical Drop Shadow */}
+        <div className={`absolute inset-2 bg-black/60 rounded-full transition-all duration-700 blur-[6px] 
+          ${isMoving ? 'scale-[2.5] translate-y-20 opacity-10' : 'scale-110 translate-y-2 opacity-40'}`} 
+        />
+        
+        {/* Selection Aura */}
+        {isMovable && (
+          <div className="absolute inset-[-60%] rounded-full bg-white/40 blur-3xl animate-movable-pulse z-[-1]" />
+        )}
+
+        {/* Resin Body */}
+        <div 
+          className={`w-full h-full rounded-full bg-gradient-to-br border-b-[8px] border-black/60 transition-all preserve-3d group overflow-hidden ${pieceColorStyles[pc.color]} 
+            ${isMovable ? 'ring-[4px] ring-white shadow-[0_0_50px_rgba(255,255,255,0.8)] animate-movable-glow' : 'opacity-100'} 
+            ${isVictory ? 'shadow-[0_0_80px_white] ring-8 ring-yellow-400' : ''}`}
+          style={{ 
+            filter: `brightness(${physics.brightness})`,
+          }}
+        >
+          {/* Surface Shaders */}
+          <div className="absolute inset-0 bg-gradient-to-tr from-white/20 via-transparent to-black/40 pointer-events-none" />
+          <div className="absolute top-1 left-2 w-1/3 h-1/4 bg-white/40 rounded-full blur-[2px] rotate-[15deg] pointer-events-none" />
+          
+          {/* Movable Core Animation */}
+          {isMovable && (
+            <div className="absolute inset-0 bg-white/10 animate-shimmer" />
+          )}
+
+          {/* Internal Energy Core */}
+          <div className={`absolute inset-0 flex items-center justify-center transition-all duration-500 ${counterRotate}`}>
+             <div className={`transition-transform duration-700 ${isMoving ? 'scale-150' : 'scale-100'}`}>
+               {isMovable ? (
+                 <Zap size={14} className="text-white animate-pulse drop-shadow-[0_0_8px_white]" />
+               ) : (
+                 <Sparkles size={14} className={pc.color === 'YELLOW' ? 'text-slate-900' : 'text-white'} />
+               )}
+             </div>
+          </div>
+
+          {/* Individual ID / Stack Position */}
+          {stackTotal > 1 && (
+            <div className={`absolute inset-0 flex items-center justify-center ${counterRotate} opacity-20 pointer-events-none`}>
+              <span className="text-[10px] font-black">{stackIndex + 1}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Outer Ring Feedback for Interaction */}
+        {isMovable && (
+          <div className="absolute inset-[-15%] rounded-full border-4 border-white/60 animate-ping opacity-30" />
+        )}
       </div>
     </div>
   );
 };
 
 export default memo(Piece, (prev, next) => {
-  return prev.pc.position === next.pc.position && prev.stackIndex === next.stackIndex && prev.stackTotal === next.stackTotal && prev.active === next.active && prev.canMove === next.canMove && prev.gameState === next.gameState && prev.counterRotate === next.counterRotate;
+  return (
+    prev.pc.position === next.pc.position && 
+    prev.stackIndex === next.stackIndex && 
+    prev.stackTotal === next.stackTotal && 
+    prev.active === next.active && 
+    prev.canMove === next.canMove && 
+    prev.gameState === next.gameState && 
+    prev.currentCycle === next.currentCycle
+  );
 });

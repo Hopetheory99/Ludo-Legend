@@ -17,9 +17,10 @@ interface BoardProps {
   onRoll: () => void;
   gameState: string;
   shake?: boolean;
+  currentCycle?: 'DAY' | 'NIGHT';
 }
 
-const Board: React.FC<BoardProps> = ({ players, onPieceClick, activeColor, theme, diceValue, onRoll, gameState, shake, canPieceMove }) => {
+const Board: React.FC<BoardProps> = ({ players, onPieceClick, activeColor, theme, diceValue, onRoll, gameState, shake, canPieceMove, currentCycle = 'DAY' }) => {
   const rotations: Record<PlayerColor, string> = { 
     RED: 'rotate-z-0', 
     BLUE: 'rotate-z-[-90deg]', 
@@ -33,6 +34,15 @@ const Board: React.FC<BoardProps> = ({ players, onPieceClick, activeColor, theme
     YELLOW: 'rotate-z-[-180deg]', 
     GREEN: 'rotate-z-[-90deg]' 
   };
+
+  const quadrantSpotlight: Record<PlayerColor, string> = {
+    RED: 'top-0 left-0 bg-red-600/10',
+    BLUE: 'top-0 right-0 bg-blue-600/10',
+    YELLOW: 'bottom-0 right-0 bg-yellow-500/10',
+    GREEN: 'bottom-0 left-0 bg-emerald-600/10'
+  };
+
+  const activePlayer = players.find(p => p.color === activeColor);
 
   const { pieceLayouts, stackIndicators } = useMemo(() => {
     const list: any[] = [];
@@ -84,7 +94,7 @@ const Board: React.FC<BoardProps> = ({ players, onPieceClick, activeColor, theme
         }
 
         let cellClass = GLASS_STYLES.TILE_BASE;
-        cellClass += " animate-path-shimmer"; // Apply shimmer to all board tiles
+        cellClass += " animate-path-shimmer"; 
         
         let content = null;
 
@@ -92,25 +102,24 @@ const Board: React.FC<BoardProps> = ({ players, onPieceClick, activeColor, theme
            cellClass += ` ${startTiles[tileKey]}`;
         }
 
-        // Apply Home Path Colors
-        if (r === 7 && c > 0 && c < 7) cellClass += " bg-red-500/5";
-        if (c === 7 && r > 0 && r < 7) cellClass += " bg-blue-500/5";
-        if (r === 7 && c > 7 && c < 14) cellClass += " bg-yellow-500/5";
-        if (c === 7 && r > 7 && r < 14) cellClass += " bg-emerald-500/5";
+        if (r === 7 && c > 0 && c < 7) cellClass += currentCycle === 'DAY' ? " bg-red-400/10" : " bg-red-500/5";
+        if (c === 7 && r > 0 && r < 7) cellClass += currentCycle === 'DAY' ? " bg-blue-400/10" : " bg-blue-500/5";
+        if (r === 7 && c > 7 && c < 14) cellClass += currentCycle === 'DAY' ? " bg-yellow-400/10" : " bg-yellow-500/5";
+        if (c === 7 && r > 7 && r < 14) cellClass += currentCycle === 'DAY' ? " bg-emerald-400/10" : " bg-emerald-500/5";
 
         if (isSafe) {
-          cellClass += " animate-safe-breath bg-sky-400/5 border-sky-400/20";
+          cellClass += currentCycle === 'NIGHT' ? " animate-safe-breath bg-sky-400/10 border-sky-400/40" : " bg-sky-400/10 border-sky-400/20";
           content = (
             <div className="relative flex items-center justify-center">
-              <Shield size={12} className="text-sky-300 opacity-60 relative z-10" />
-              <div className="absolute inset-0 bg-sky-400/10 blur-lg rounded-full animate-pulse" />
+              <Shield size={12} className={`${currentCycle === 'NIGHT' ? 'text-sky-300' : 'text-sky-400'} opacity-80 relative z-10`} />
+              <div className={`absolute inset-0 bg-sky-400/20 blur-lg rounded-full ${currentCycle === 'NIGHT' ? 'animate-pulse' : ''}`} />
             </div>
           );
         }
 
         cells.push(
-          <div key={`${r}-${c}`} className={`relative flex items-center justify-center transition-all duration-500 ${cellClass}`}>
-            <div className="rail-glow opacity-30" />
+          <div key={`${r}-${c}`} className={`relative flex items-center justify-center transition-all duration-[2000ms] ${cellClass}`}>
+            <div className={`rail-glow ${currentCycle === 'NIGHT' ? 'opacity-40' : 'opacity-20'}`} />
             {content}
           </div>
         );
@@ -120,17 +129,25 @@ const Board: React.FC<BoardProps> = ({ players, onPieceClick, activeColor, theme
   };
 
   return (
-    <div className={`relative w-full max-w-[92vh] aspect-square perspective-[3000px] flex items-center justify-center transition-all duration-1000 ${shake ? 'scale-[1.02] translate-y-1' : ''}`}>
-      <div className={`absolute inset-[-20%] rounded-full blur-[140px] opacity-25 transition-all duration-1000 pointer-events-none
+    <div className={`relative w-full max-w-[92vh] aspect-square perspective-[3000px] flex items-center justify-center transition-all duration-[2000ms] ${shake ? 'scale-[1.02] translate-y-1' : ''}`}>
+      <div className={`absolute inset-[-20%] rounded-full blur-[140px] opacity-25 transition-all duration-[2000ms] pointer-events-none
         ${activeColor === 'RED' ? 'bg-red-600' : activeColor === 'BLUE' ? 'bg-blue-600' : activeColor === 'YELLOW' ? 'bg-yellow-500' : 'bg-emerald-600'}`} 
       />
 
-      <div className={`relative w-full h-full ${GLASS_STYLES.OBSIDIAN} rounded-[5.5rem] p-10 md:p-12 preserve-3d rotate-x-[12deg] ${rotations[activeColor]} transition-all duration-1000 cubic-bezier(0.4, 0, 0.2, 1)`}>
-        <div className="absolute inset-2 rounded-[5.2rem] border-[3px] border-white/5 pointer-events-none z-[60] neon-rim" />
+      <div className={`relative w-full h-full ${currentCycle === 'DAY' ? 'bg-slate-800/40' : GLASS_STYLES.OBSIDIAN} rounded-[5.5rem] p-10 md:p-12 preserve-3d rotate-x-[12deg] ${rotations[activeColor]} transition-all duration-[2000ms] cubic-bezier(0.4, 0, 0.2, 1) ${gameState === 'WAITING_FOR_ROLL' ? 'animate-turn-impact' : ''}`}>
+        <div className={`absolute inset-2 rounded-[5.2rem] border-[3px] ${currentCycle === 'NIGHT' ? 'border-white/10' : 'border-white/20'} pointer-events-none z-[60] neon-rim`} />
         
+        {/* Quadrant Spotlight */}
+        <div className={`absolute w-1/2 h-1/2 blur-[80px] transition-all duration-[2000ms] pointer-events-none z-[5] ${quadrantSpotlight[activeColor]} ${currentCycle === 'NIGHT' ? 'opacity-40' : 'opacity-20'}`} />
+
+        {/* Ambient Top Light (Day Only) */}
+        {currentCycle === 'DAY' && (
+          <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-bl from-white/10 to-transparent rounded-[5.5rem] pointer-events-none z-0" />
+        )}
+
         <div className="absolute inset-10 md:inset-12 z-[5] pointer-events-none opacity-[0.05] bg-scanline rounded-[4rem]" />
         
-        <div className="grid grid-cols-15 grid-rows-15 w-full h-full relative z-10 rounded-[4rem] overflow-hidden shadow-[inset_0_0_120px_rgba(0,0,0,1)] ring-1 ring-white/10 translate-z-[-10px] bg-slate-950/50">
+        <div className={`grid grid-cols-15 grid-rows-15 w-full h-full relative z-10 rounded-[4rem] overflow-hidden shadow-[inset_0_0_120px_rgba(0,0,0,1)] ring-1 ring-white/10 translate-z-[-10px] ${currentCycle === 'DAY' ? 'bg-slate-900/60' : 'bg-slate-950/80'} transition-colors duration-[2000ms]`}>
           {renderGrid()}
         </div>
 
@@ -143,6 +160,7 @@ const Board: React.FC<BoardProps> = ({ players, onPieceClick, activeColor, theme
               active={activeColor === color} 
               pos={i === 0 ? "top-0 left-0" : i === 1 ? "top-0 right-0" : i === 2 ? "bottom-0 right-0" : "bottom-0 left-0"} 
               counterRotate={counterRotations[activeColor]} 
+              currentCycle={currentCycle}
             />
           ))}
         </div>
@@ -160,46 +178,31 @@ const Board: React.FC<BoardProps> = ({ players, onPieceClick, activeColor, theme
                  onRoll={onRoll}
                  gameState={gameState}
                  counterRotate={counterRotations[activeColor]}
+                 currentCycle={currentCycle}
                />
              );
           })}
         </div>
 
         <div className="absolute top-[36.6%] left-[36.6%] w-[26.6%] h-[26.6%] z-40 p-4 pointer-events-none preserve-3d translate-z-20">
-          <div className="relative w-full h-full bg-slate-900/95 rounded-full border-2 border-white/20 flex items-center justify-center shadow-[0_0_100px_rgba(99,102,241,0.3)] overflow-hidden animate-nexus-pulse">
+          <div className={`relative w-full h-full ${currentCycle === 'DAY' ? 'bg-slate-800/90' : 'bg-slate-900/95'} rounded-full border-2 border-white/20 flex items-center justify-center shadow-[0_0_100px_rgba(99,102,241,0.3)] overflow-hidden animate-nexus-pulse transition-colors duration-[2000ms]`}>
              <div className="relative z-10 flex flex-col items-center gap-3">
                 <Trophy size={64} className="text-yellow-400 drop-shadow-[0_0_30px_rgba(250,204,21,0.8)] animate-float" />
-                <div className="flex gap-2">
-                   <Star size={14} className="text-yellow-500 animate-pulse" />
-                   <Star size={18} className="text-yellow-400 animate-pulse delay-75" />
-                </div>
              </div>
           </div>
         </div>
 
         <div className="absolute inset-0 pointer-events-none z-50 preserve-3d">
-          {stackIndicators.map((ind, i) => (
-            <div 
-              key={`ind-${i}`}
-              className={`absolute flex items-center justify-center transition-all duration-500 ${counterRotations[activeColor]}`}
-              style={{ top: `${(ind.r / 15) * 100}%`, left: `${(ind.c / 15) * 100}%`, width: '6.66%', height: '6.66%', zIndex: Z_INDEX.PIECE_STACKED }}
-            >
-              <div className="bg-white/10 backdrop-blur-md px-1.5 py-0.5 rounded-full border border-white/20 translate-y-6 scale-75 opacity-60 flex items-center gap-1">
-                <Layers size={10} className="text-white" />
-                <span className="text-[8px] font-black text-white">{ind.count}</span>
-              </div>
-            </div>
-          ))}
-
           {pieceLayouts.map(data => (
             <Piece 
               key={data.pc.id} 
               {...data} 
-              active={activeColor === data.pc.color} 
+              active={data.pc.color === activeColor || (activePlayer?.teamId && activePlayer.teamId === players.find(p => p.color === data.pc.color)?.teamId)} 
               onClick={onPieceClick} 
               canMove={diceValue !== null && canPieceMove(data.pc, diceValue)} 
               gameState={gameState} 
               counterRotate={counterRotations[activeColor]} 
+              currentCycle={currentCycle}
             />
           ))}
         </div>
@@ -208,7 +211,7 @@ const Board: React.FC<BoardProps> = ({ players, onPieceClick, activeColor, theme
   );
 };
 
-const MonolithPedestal: React.FC<any> = ({ color, active, pos, diceValue, onRoll, gameState, counterRotate }) => {
+const MonolithPedestal: React.FC<any> = ({ color, active, pos, diceValue, onRoll, gameState, counterRotate, currentCycle }) => {
   const platformColors = {
     RED: 'border-red-500/40 text-red-500 shadow-red-500/20 bg-red-950/40',
     BLUE: 'border-blue-500/40 text-blue-500 shadow-blue-500/20 bg-blue-950/40',
@@ -216,25 +219,27 @@ const MonolithPedestal: React.FC<any> = ({ color, active, pos, diceValue, onRoll
     GREEN: 'border-emerald-500/40 text-emerald-500 shadow-emerald-500/20 bg-emerald-950/40'
   };
 
+  const isUserTurnToRoll = active && gameState === 'WAITING_FOR_ROLL';
+
   return (
-    <div className={`absolute w-36 h-36 flex flex-col items-center justify-center transition-all duration-1000 ${pos} preserve-3d animate-monolith-float`} style={{ zIndex: active ? Z_INDEX.MONOLITH_ACTIVE : Z_INDEX.MONOLITH_BASE }}>
-       <div className={`relative w-28 h-28 rounded-3xl border-2 ${GLASS_STYLES.OBSIDIAN} backdrop-blur-2xl flex items-center justify-center transition-all duration-700 ${platformColors[color]} ${active ? 'scale-110 shadow-[0_0_80px_currentColor] border-white opacity-100 translate-z-40' : 'scale-90 opacity-20 border-white/5 translate-z-0 grayscale'} ${counterRotate} pointer-events-auto`}>
-          <div className={`transform transition-all duration-700 ${active ? 'scale-[1.1] opacity-100' : 'scale-[0.8] opacity-60'}`}>
+    <div className={`absolute w-36 h-36 flex flex-col items-center justify-center transition-all duration-[2000ms] ${pos} preserve-3d animate-monolith-float`} style={{ zIndex: active ? Z_INDEX.MONOLITH_ACTIVE : Z_INDEX.MONOLITH_BASE }}>
+       <div className={`relative w-28 h-28 rounded-3xl border-2 ${currentCycle === 'DAY' ? 'bg-slate-800/80' : GLASS_STYLES.OBSIDIAN} backdrop-blur-2xl flex items-center justify-center transition-all duration-700 ${platformColors[color]} ${active ? 'scale-110 shadow-[0_0_80px_currentColor] border-white opacity-100 translate-z-40' : 'scale-90 opacity-50 border-white/5 translate-z-0 grayscale-[0.1]'} ${counterRotate} pointer-events-auto ${isUserTurnToRoll ? 'animate-dice-active-call' : ''}`}>
+          <div className={`transform transition-all duration-700 ${active ? 'scale-[1.1] opacity-100' : 'scale-[1.0] opacity-90'}`}>
             <Dice 
               value={diceValue} 
               onRoll={onRoll} 
-              disabled={!active || (gameState !== 'LOBBY' && gameState !== 'ROLLING')} 
+              disabled={!active || (gameState !== 'WAITING_FOR_ROLL')} 
               color={color} 
               isActivePlayer={active}
             />
           </div>
        </div>
-       <div className="monolith-shadow w-24 h-6 mt-4 opacity-50 blur-xl" />
+       <div className={`monolith-shadow w-24 h-6 mt-4 opacity-50 blur-xl ${currentCycle === 'DAY' ? 'brightness-150' : ''}`} />
     </div>
   );
 };
 
-const HomeBase: React.FC<any> = ({ color, players, active, pos, counterRotate }) => {
+const HomeBase: React.FC<any> = ({ color, players, active, pos, counterRotate, currentCycle }) => {
   const player = players.find(p => p.color === color);
   if (!player) return null;
   
@@ -245,15 +250,24 @@ const HomeBase: React.FC<any> = ({ color, players, active, pos, counterRotate })
     GREEN: 'border-emerald-500/40 bg-emerald-950/10 shadow-emerald-500/20'
   };
 
+  const glowColors = {
+    RED: 'rgba(239, 68, 68, 0.6)',
+    BLUE: 'rgba(59, 130, 246, 0.6)',
+    YELLOW: 'rgba(234, 179, 8, 0.6)',
+    GREEN: 'rgba(16, 185, 129, 0.6)'
+  };
+
   return (
-    <div className={`absolute w-[40%] h-[40%] p-10 md:p-12 ${pos} preserve-3d transition-all duration-1000`} style={{ zIndex: Z_INDEX.HOME_BASE }}>
-      <div className={`relative w-full h-full rounded-[5rem] border-2 transition-all duration-700 ${GLASS_STYLES.OBSIDIAN} ${themes[color]} ${active ? 'border-white/60 scale-[1.05] translate-z-20 z-40' : 'opacity-40 translate-z-0'}`}>
-        <div className={`absolute top-8 left-8 w-20 h-20 md:w-24 md:h-24 rounded-[2.5rem] border-2 transition-all duration-500 overflow-hidden bg-slate-800 shadow-2xl ${active ? 'border-white scale-110' : 'border-white/10'} ${counterRotate} pointer-events-auto`}>
+    <div className={`absolute w-[40%] h-[40%] p-10 md:p-12 ${pos} preserve-3d transition-all duration-[2000ms]`} style={{ zIndex: Z_INDEX.HOME_BASE }}>
+      <div 
+        className={`relative w-full h-full rounded-[5rem] border-2 transition-all duration-700 ${currentCycle === 'DAY' ? 'bg-slate-800/80 border-white/20' : GLASS_STYLES.OBSIDIAN + ' ' + themes[color]} ${active ? 'border-white/60 scale-[1.05] translate-z-20 z-40 animate-turn-avatar-glow' : 'opacity-40 translate-z-0'}`}
+        style={active ? { '--glow-color': glowColors[color] } as any : {}}
+      >
+        <div className={`absolute top-8 left-8 w-20 h-20 md:w-24 md:h-24 rounded-[2.5rem] border-2 transition-all duration-500 overflow-hidden bg-slate-800 shadow-2xl ${active ? 'border-white scale-110 ring-4 ring-white/30' : 'border-white/10'} ${counterRotate} pointer-events-auto`}>
           <img src={player.avatar} className="w-full h-full object-cover" />
-          {active && <div className="absolute inset-0 bg-white/10 animate-pulse" />}
         </div>
         <div className="absolute top-10 right-10 opacity-10">
-          <Cpu size={40} className="animate-spin-slow" />
+          <Cpu size={40} className="animate-spin-slow text-white" />
         </div>
         <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 px-12 py-4 rounded-3xl bg-slate-900/90 border-2 border-white/10 shadow-2xl ${counterRotate} transition-all duration-500 ${active ? 'scale-110 border-white/40 shadow-[0_0_30px_rgba(255,255,255,0.1)]' : 'scale-90 opacity-40'}`}>
            <span className="text-xs font-black uppercase tracking-[0.3em] text-white whitespace-nowrap">{player.name}</span>
